@@ -14,9 +14,6 @@ sudo apt-get update -qq
 # Instalar SOLO los clientes (no los servidores)
 echo "📦 Instalando clientes de PostgreSQL y Redis..."
 sudo apt-get install -y -qq \
-  postgresql-client \
-  redis-tools \
-  libpq-dev \
   build-essential \
   git \
   curl

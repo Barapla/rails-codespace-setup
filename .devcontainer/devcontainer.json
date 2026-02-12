@@ -3,11 +3,9 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
-  
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-
   "customizations": {
     "vscode": {
       "extensions": [
@@ -42,9 +40,11 @@
       }
     }
   },
-
-  "forwardPorts": [3000, 5432, 6379],
-  
+  "forwardPorts": [
+    3000,
+    5432,
+    6379
+  ],
   "portsAttributes": {
     "3000": {
       "label": "Rails API",
@@ -57,8 +57,8 @@
       "label": "Redis"
     }
   },
-
-  "postCreateCommand": "bash .devcontainer/setup.sh",
-
+  "onCreateCommand": "echo '🚀 Container created, preparing setup...'",
+  "postCreateCommand": "bash /workspace/.devcontainer/setup.sh 2>&1 | tee /tmp/setup.log",
+  "postStartCommand": "echo '✅ Container started' && cat /tmp/setup.log 2>/dev/null || echo 'Run: bash .devcontainer/setup.sh'",
   "remoteUser": "vscode"
 }

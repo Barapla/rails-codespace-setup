@@ -7,6 +7,10 @@ echo "🚀 SETUP AUTOMÁTICO - RAILS API TEMPLATE"
 echo "============================================"
 echo ""
 
+# Remover repositorio problemático de Yarn si existe
+echo "🔧 Limpiando repositorios problemáticos..."
+sudo rm -f /etc/apt/sources.list.d/yarn.list 2>/dev/null || true
+
 # Actualizar sistema
 echo "📦 Actualizando sistema..."
 sudo apt-get update -qq

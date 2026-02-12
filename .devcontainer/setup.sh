@@ -11,15 +11,18 @@ echo ""
 echo "📦 Actualizando sistema..."
 sudo apt-get update -qq
 
-# Instalar SOLO los clientes (no los servidores)
-echo "📦 Instalando clientes de PostgreSQL y Redis..."
+# Instalar SOLO los clientes
+echo "📦 Instalando clientes PostgreSQL y Redis..."
 sudo apt-get install -y -qq \
+  postgresql-client \
+  redis-tools \
+  libpq-dev \
   build-essential \
   git \
   curl
 
 # Configurar Ruby
-echo "💎 Configurando Ruby..."
+echo "💎 Configurando Bundler..."
 gem install bundler --no-document
 
 # Configurar Git
@@ -29,45 +32,51 @@ git config --global pull.rebase false
 
 # Crear archivo .env
 echo "📝 Creando archivo .env..."
-cat > .env << 'EOF'
-DB_HOST=localhost
+cat > /workspace/.env << 'EOF'
+DB_HOST=db
 DB_USERNAME=postgres
 DB_PASSWORD=postgres
-REDIS_URL=redis://localhost:6379/0
+REDIS_URL=redis://redis:6379/0
 RAILS_ENV=development
 EOF
 
-# Esperar a que los servicios estén listos
+# Esperar a que PostgreSQL esté listo
 echo "⏳ Esperando a que PostgreSQL esté listo..."
 for i in {1..30}; do
-  if pg_isready -h localhost -U postgres > /dev/null 2>&1; then
+  if pg_isready -h db -U postgres > /dev/null 2>&1; then
     echo "✅ PostgreSQL está listo"
     break
   fi
-  echo "   Intento $i/30..."
+  if [ $i -eq 30 ]; then
+    echo "❌ PostgreSQL no responde después de 60 segundos"
+  fi
   sleep 2
 done
 
+# Esperar a que Redis esté listo
 echo "⏳ Esperando a que Redis esté listo..."
 for i in {1..30}; do
-  if redis-cli -h localhost ping > /dev/null 2>&1; then
+  if redis-cli -h redis ping > /dev/null 2>&1; then
     echo "✅ Redis está listo"
     break
   fi
-  echo "   Intento $i/30..."
+  if [ $i -eq 30 ]; then
+    echo "❌ Redis no responde después de 60 segundos"
+  fi
   sleep 2
 done
 
 # Si existe Gemfile, instalar dependencias
-if [ -f "Gemfile" ]; then
+if [ -f "/workspace/Gemfile" ]; then
   echo "📦 Gemfile detectado, instalando gems..."
+  cd /workspace
   bundle install
   
   # Si existe Rails, configurar BD
   if bundle show rails > /dev/null 2>&1; then
-    echo "🗄️  Configurando base de datos Rails..."
-    bin/rails db:create 2>/dev/null || echo "⚠️  No se pudo crear BD (ejecuta 'rails db:create' manualmente)"
-    bin/rails db:migrate 2>/dev/null || echo "⚠️  No hay migraciones aún"
+    echo "🗄️ Configurando base de datos Rails..."
+    bin/rails db:create 2>/dev/null || echo "⚠️ No se pudo crear BD"
+    bin/rails db:migrate 2>/dev/null || echo "⚠️ No hay migraciones aún"
   fi
 fi
 
@@ -83,15 +92,15 @@ echo "Redis Client: $(redis-cli --version)"
 echo ""
 
 # Verificar servicios
-if pg_isready -h localhost -U postgres > /dev/null 2>&1; then
-  echo "✅ PostgreSQL conectado"
-  psql -h localhost -U postgres -c "SELECT version();" 2>/dev/null | head -3
+if pg_isready -h db -U postgres > /dev/null 2>&1; then
+  echo "✅ PostgreSQL conectado (hostname: db)"
+  psql -h db -U postgres -c "SELECT version();" 2>/dev/null | head -3 | tail -1
 else
   echo "❌ PostgreSQL no conecta"
 fi
 
-if redis-cli -h localhost ping > /dev/null 2>&1; then
-  echo "✅ Redis conectado ($(redis-cli -h localhost ping))"
+if redis-cli -h redis ping > /dev/null 2>&1; then
+  echo "✅ Redis conectado (hostname: redis) - $(redis-cli -h redis ping)"
 else
   echo "❌ Redis no conecta"
 fi

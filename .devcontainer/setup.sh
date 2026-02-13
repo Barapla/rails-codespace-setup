@@ -137,5 +137,4 @@ fi
 echo ""
 
 # Marcar como completado
-touch /workspace/.setup_complete
 echo "✅ Setup marcado como completado"

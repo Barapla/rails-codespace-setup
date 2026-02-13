@@ -1,76 +1,26 @@
 # Rails API Codespace Template
 
-Template listo para producción de Rails API con PostgreSQL y Redis configurado para GitHub Codespaces.
+Template base para proyectos Rails API con PostgreSQL y Redis configurado para GitHub Codespaces.
 
 ## 🚀 Quick Start
 
 ### 1. Usar Este Template
 
 1. Click en **"Use this template"** en GitHub
-2. Crea tu nuevo repositorio
+2. Crea tu nuevo repositorio (ej: `mi-proyecto-api`)
 3. Abre un **Codespace** (botón verde "Code" → "Codespaces" → "Create codespace")
-4. Espera ~2-3 minutos mientras se instala todo automáticamente
-5. Verás el mensaje de setup completado ✨
+4. Espera ~2-3 minutos mientras se instala todo automáticamente ✨
 
 ### 2. Crear Tu Proyecto Rails
-
-Una vez que el Codespace esté listo:
 ```bash
-# Opción A: Crear proyecto nuevo desde cero
+# Crear proyecto Rails API
 rails new . --api --database=postgresql --force --skip-git
+
+# Instalar dependencias
 bundle install
-rails db:create
 
-# Opción B: Si ya tienes un proyecto, solo:
-bundle install
-rails db:create db:migrate
-```
-
-### 3. Iniciar el Servidor
-```bash
-rails server
-```
-
-Tu API estará disponible en el puerto 3000 (GitHub Codespaces lo detecta automáticamente).
-
----
-
-## 📦 ¿Qué Incluye?
-
-### Stack Completo Pre-instalado
-- ✅ **Ruby 3.2.8**
-- ✅ **Rails** (última versión estable)
-- ✅ **PostgreSQL 15** (en contenedor separado)
-- ✅ **Redis 7** (en contenedor separado)
-- ✅ **Bundler**
-- ✅ **PostgreSQL Client & Redis CLI**
-
-### VS Code Extensions
-- Ruby & RuboCop
-- Solargraph (IntelliSense)
-- GitHub Copilot
-- GitLens
-
-### Configuración Automática
-- Variables de entorno pre-configuradas (`.env`)
-- Base de datos lista para conectar
-- Redis cache configurado
-- Git configurado
-
----
-
-## 🗄️ Configuración de Base de Datos
-
-El template usa estas variables de entorno (ya configuradas en `.env`):
-```bash
-DB_HOST=db
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-REDIS_URL=redis://redis:6379/0
-```
-
-Tu `config/database.yml` debería verse así:
-```yaml
+# IMPORTANTE: Configurar database.yml
+cat > config/database.yml << 'EOF'
 default: &default
   adapter: postgresql
   encoding: unicode
@@ -86,91 +36,182 @@ development:
 test:
   <<: *default
   database: mi_proyecto_test
+
+production:
+  <<: *default
+  database: mi_proyecto_production
+EOF
+
+# Crear la base de datos
+rails db:create
+
+# Verificar que todo funciona
+rails console
+```
+
+### 3. Iniciar el Servidor
+```bash
+rails server -b 0.0.0.0
+```
+
+Tu API estará disponible en el puerto 3000 (GitHub Codespaces lo detecta automáticamente).
+
+---
+
+## 📦 ¿Qué Incluye Este Template?
+
+### Stack Pre-instalado
+- ✅ **Ruby 3.2.8**
+- ✅ **Rails** (última versión estable)
+- ✅ **PostgreSQL 15** (contenedor separado, hostname: `db`)
+- ✅ **Redis 7** (contenedor separado, hostname: `redis`)
+- ✅ **Bundler**
+- ✅ **PostgreSQL Client & Redis CLI**
+
+### VS Code Extensions
+- Ruby & RuboCop
+- Solargraph (IntelliSense)
+- GitHub Copilot
+- GitLens
+- Code Spell Checker
+
+### Archivo `.env` Pre-configurado
+```bash
+DB_HOST=db
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+REDIS_URL=redis://redis:6379/0
+RAILS_ENV=development
+```
+
+---
+
+## ⚙️ Configuración Importante
+
+### Database Configuration
+
+**CRÍTICO**: Rails por defecto busca PostgreSQL en `localhost`, pero en este template PostgreSQL corre en un contenedor con hostname `db`.
+
+Tu `config/database.yml` **DEBE** usar las variables de entorno:
+```yaml
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV.fetch("DB_HOST") { "db" } %>        # ← IMPORTANTE
+  username: <%= ENV.fetch("DB_USERNAME") { "postgres" } %>
+  password: <%= ENV.fetch("DB_PASSWORD") { "postgres" } %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+```
+
+### Redis Configuration
+
+Si usas Redis para cache o Sidekiq, configúralo así:
+```ruby
+# config/initializers/redis.rb
+Redis.current = Redis.new(url: ENV.fetch("REDIS_URL", "redis://redis:6379/0"))
+
+# config/environments/development.rb
+config.cache_store = :redis_cache_store, { url: ENV['REDIS_URL'] }
 ```
 
 ---
 
 ## 🛠️ Comandos Útiles
+
+### Verificar Servicios
 ```bash
-# Verificar que todo esté instalado
-ruby -v
-rails -v
-psql --version
-redis-cli --version
-
-# Verificar conexiones
+# PostgreSQL
 pg_isready -h db -U postgres
-redis-cli -h redis ping
+PGPASSWORD=postgres psql -h db -U postgres -c "SELECT version();"
 
-# Rails
+# Redis  
+redis-cli -h redis ping
+redis-cli -h redis SET test "hello"
+redis-cli -h redis GET test
+```
+
+### Rails
+```bash
 rails db:create          # Crear base de datos
 rails db:migrate         # Correr migraciones
 rails db:seed            # Poblar con datos
 rails console            # Consola interactiva
-rails server             # Iniciar servidor
+rails server -b 0.0.0.0  # Iniciar servidor
 rails routes             # Ver todas las rutas
+```
 
-# Testing (cuando lo configures)
+### Testing (cuando lo configures)
+```bash
 bundle exec rspec
 bundle exec rubocop
 ```
 
 ---
 
-## 🔧 Estructura del Template
+## 📁 Estructura del Template
 ```
 rails-api-codespace-template/
 ├── .devcontainer/
-│   ├── devcontainer.json    # Configuración del Codespace
-│   ├── docker-compose.yml   # PostgreSQL y Redis
-│   └── setup.sh             # Script de instalación automática
-├── .env                     # Variables de entorno (auto-generado)
+│   ├── devcontainer.json      # Configuración del Codespace
+│   ├── docker-compose.yml     # PostgreSQL y Redis
+│   └── setup.sh               # Script de instalación automática
+├── .env                       # Variables de entorno (auto-generado)
 ├── .gitignore
 └── README.md
 ```
 
 ---
 
-## 📚 Próximos Pasos Recomendados
+## 🎯 Próximos Pasos Después del `rails new`
 
-Después de crear tu proyecto Rails:
+### 1. Configurar dotenv-rails (Recomendado)
 
-1. **Configurar RuboCop**
+Para cargar automáticamente el `.env`:
 ```bash
-   bundle add rubocop rubocop-rails rubocop-rspec --group development
+# Agregar al Gemfile
+echo "gem 'dotenv-rails', groups: [:development, :test]" >> Gemfile
+bundle install
 ```
 
-2. **Configurar RSpec**
+### 2. Configurar RuboCop Standard
 ```bash
-   bundle add rspec-rails --group development,test
-   rails generate rspec:install
+bundle add standard --group development
+echo "require: standard" > .rubocop.yml
 ```
 
-3. **Agregar gemas comunes**
+### 3. Configurar RSpec
+```bash
+bundle add rspec-rails --group development,test
+rails generate rspec:install
+```
+
+### 4. Gemas Comunes para APIs
 ```ruby
-   # Gemfile
-   gem 'rack-cors'           # CORS para frontend
-   gem 'bcrypt'              # Autenticación
-   gem 'jwt'                 # Tokens JWT
-   gem 'redis'               # Cliente Redis
-   gem 'sidekiq'             # Background jobs
+# Gemfile
+gem 'rack-cors'           # CORS para frontend
+gem 'bcrypt'              # Autenticación
+gem 'jwt'                 # Tokens JWT
+gem 'redis'               # Cliente Redis
+gem 'sidekiq'             # Background jobs
+gem 'pagy'                # Paginación
+gem 'blueprinter'         # JSON serialization
 ```
 
 ---
 
-## 🚨 Troubleshooting
+## 🐛 Troubleshooting
 
-### PostgreSQL no conecta
-```bash
-pg_isready -h db -U postgres
-# Si falla, verifica que el contenedor esté corriendo
-```
+### "Could not connect to server" al crear la BD
 
-### Redis no conecta
-```bash
-redis-cli -h redis ping
-# Debe responder: PONG
-```
+**Problema**: Rails está buscando PostgreSQL en `localhost` en lugar de `db`.
+
+**Solución**: Verifica que tu `config/database.yml` use `host: <%= ENV.fetch("DB_HOST") { "db" } %>`
+
+### "Connection refused" con Redis
+
+**Problema**: Estás intentando conectar a `localhost` en lugar de `redis`.
+
+**Solución**: Usa `redis-cli -h redis ping` en lugar de `redis-cli ping`
 
 ### El setup no se ejecutó automáticamente
 ```bash
@@ -178,37 +219,40 @@ redis-cli -h redis ping
 bash .devcontainer/setup.sh
 ```
 
+### Ver logs del setup
+```bash
+cat /tmp/setup.log
+```
+
 ---
 
-## 💡 Tips
+## 💡 Tips de GitHub Codespaces
 
-- **Costos**: GitHub te da 120 horas gratis/mes de Codespaces (máquina de 2 cores)
-- **Pausa automática**: El Codespace se pausa después de 30 minutos de inactividad
+- **Costos**: 120 horas gratis/mes (máquina de 2 cores) - más que suficiente
+- **Pausa automática**: Se pausa después de 30 min de inactividad
 - **Persistencia**: Los datos de PostgreSQL y Redis persisten entre sesiones
-- **Secrets**: Para variables sensibles, usa GitHub Codespaces Secrets
+- **Secrets**: Para variables sensibles, usa GitHub Codespaces Secrets en repo settings
+- **Puertos**: Los puertos 3000, 5432, 6379 se exponen automáticamente
 
 ---
 
-## 📖 Documentación
+## 📖 Recursos
 
-- [GitHub Codespaces](https://docs.github.com/en/codespaces)
+- [GitHub Codespaces Docs](https://docs.github.com/en/codespaces)
 - [Rails Guides](https://guides.rubyonrails.org/)
 - [PostgreSQL Docs](https://www.postgresql.org/docs/)
 - [Redis Docs](https://redis.io/docs/)
 
 ---
 
-**Creado por**: Brainmachine  
-**Última actualización**: Febrero 2026  
-**Versión**: 1.0.0
+## 🤝 Contribuir
+
+Si encuentras mejoras para este template:
+
+1. Fork el repositorio
+2. Crea tu feature branch
+3. Commit tus cambios
+4. Push al branch
+5. Abre un Pull Request
 
 ---
-
-## 🎯 Para Usar en Nuevos Proyectos
-
-1. Clona este template
-2. Abre Codespace
-3. Espera el setup automático (2-3 min)
-4. `rails new . --api --database=postgresql --force --skip-git`
-5. `bundle install && rails db:create`
-6. ¡A programar! 🚀

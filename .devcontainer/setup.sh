@@ -7,7 +7,7 @@ echo "🚀 SETUP AUTOMÁTICO - RAILS API TEMPLATE"
 echo "============================================"
 echo ""
 
-# Remover repositorio problemático de Yarn si existe
+# Remover repositorio problemático de Yarn
 echo "🔧 Limpiando repositorios problemáticos..."
 sudo rm -f /etc/apt/sources.list.d/yarn.list 2>/dev/null || true
 
@@ -15,7 +15,7 @@ sudo rm -f /etc/apt/sources.list.d/yarn.list 2>/dev/null || true
 echo "📦 Actualizando sistema..."
 sudo apt-get update -qq
 
-# Instalar SOLO los clientes
+# Instalar clientes y dependencias
 echo "📦 Instalando clientes PostgreSQL y Redis..."
 sudo apt-get install -y -qq \
   postgresql-client \
@@ -25,9 +25,10 @@ sudo apt-get install -y -qq \
   git \
   curl
 
-# Configurar Ruby
-echo "💎 Configurando Bundler..."
+# Configurar Ruby y Rails
+echo "💎 Instalando Bundler y Rails..."
 gem install bundler --no-document
+gem install rails --no-document
 
 # Configurar Git
 echo "🔧 Configurando Git..."
@@ -79,8 +80,8 @@ if [ -f "/workspace/Gemfile" ]; then
   # Si existe Rails, configurar BD
   if bundle show rails > /dev/null 2>&1; then
     echo "🗄️ Configurando base de datos Rails..."
-    bin/rails db:create 2>/dev/null || echo "⚠️ No se pudo crear BD"
-    bin/rails db:migrate 2>/dev/null || echo "⚠️ No hay migraciones aún"
+    bundle exec rails db:create 2>/dev/null || echo "⚠️ No se pudo crear BD"
+    bundle exec rails db:migrate 2>/dev/null || echo "⚠️ No hay migraciones aún"
   fi
 fi
 
@@ -91,6 +92,7 @@ echo "✅ VERIFICACIÓN DE INSTALACIÓN"
 echo "============================================"
 echo "Ruby: $(ruby -v)"
 echo "Bundler: $(bundle -v)"
+echo "Rails: $(rails -v)"
 echo "PostgreSQL Client: $(psql --version)"
 echo "Redis Client: $(redis-cli --version)"
 echo ""
@@ -114,6 +116,16 @@ echo "============================================"
 echo "✨ SETUP COMPLETADO"
 echo "============================================"
 echo ""
-echo "👉 Siguiente paso:"
-echo "   rails new . --api --database=postgresql --force --skip-git"
+if [ ! -f "/workspace/Gemfile" ] || [ ! -f "/workspace/config/application.rb" ]; then
+  echo "👉 Para crear un nuevo proyecto Rails API:"
+  echo "   rails new . --api --database=postgresql --force --skip-git"
+  echo "   bundle install"
+  echo "   rails db:create"
+else
+  echo "✅ Proyecto Rails ya inicializado"
+  echo "👉 Comandos útiles:"
+  echo "   rails db:migrate    # Correr migraciones"
+  echo "   rails console       # Consola interactiva"
+  echo "   rails server        # Iniciar servidor"
+fi
 echo ""
